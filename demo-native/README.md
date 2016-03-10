@@ -1,5 +1,7 @@
 # Installation
 
+- add model.net file/s in app/src/main/assets/Networks
+
 - Install Android Studio from: http://developer.android.com/sdk/index.html
 - Install API 21 and API 23 through Android Studio. Tutorial: http://developer.android.com/sdk/installing/adding-packages.html
 - Open the app folder into Android Studio.
