@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:orientation="vertical"
+  android:layout_width="fill_parent"
+  android:layout_height="fill_parent"
+  >
+
+<RelativeLayout
+    android:id="@+id/background"
+    android:layout_width="fill_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <FrameLayout
+        android:id="@+id/surface_camera"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_weight="0.85"
+        android:scaleType="fitXY" />
+
+    <View
+        android:id="@+id/view1"
+        android:layout_width="fill_parent"
+        android:layout_height="60dp"
+        android:layout_marginBottom="2dp"
+        android:alpha=".85"
+        android:background="@drawable/blur5" />
+
+    <View
+        android:id="@+id/view2"
+        android:layout_width="fill_parent"
+        android:layout_height="95dp"
+        android:layout_alignParentBottom="true"
+        android:alpha=".85"
+        android:background="@drawable/blur5" />
+
+    <View
+        android:id="@+id/recordingState"
+        android:layout_width="64.5dp"
+        android:layout_height="64.5dp"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_margin="2.5dp"
+        android:layout_marginBottom="3dp"
+        android:background="@drawable/redcircle" />
+
+    <Button
+        android:id="@+id/buttonstart"
+        android:layout_width="64.5dp"
+        android:layout_height="64.5dp"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_margin="2.5dp"
+        android:layout_marginBottom="3dp"
+        android:background="@drawable/whiteborder" />
+
+    <Button
+        android:id="@+id/camera"
+        android:layout_width="35dp"
+        android:layout_height="25dp"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginRight="14.5dp"
+        android:layout_marginTop="17dp"
+        android:background="@drawable/camera" />
+
+    <Button
+        android:id="@+id/mysettings"
+        android:layout_width="35dp"
+        android:layout_height="35dp"
+        android:layout_alignBaseline="@+id/buttonstart"
+        android:layout_alignBottom="@+id/buttonstart"
+        android:layout_alignParentLeft="true"
+        android:layout_marginLeft="14.5dp"
+        android:background="@drawable/settings" />
+
+    <TextView
+        android:id="@+id/fps"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/buttonstart"
+        android:layout_alignBottom="@+id/buttonstart"
+        android:layout_alignLeft="@+id/camera"
+        android:layout_alignRight="@+id/camera"
+        android:gravity="center_vertical|center_horizontal"
+        android:textColor="#FFFFFF" />
+
+    <TextView
+        android:id="@+id/liveView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/recordingState"
+        android:layout_centerHorizontal="true"
+        android:paddingBottom = "5.5dp"
+        android:text="Live"
+        android:textColor="#FFFFFF" />
+
+    <View
+        android:id="@+id/bar"
+        android:layout_width="40dp"
+        android:layout_height="1.5dp"
+        android:layout_alignTop="@+id/view2"
+        android:layout_centerHorizontal="true"
+        android:background="#FCC200" />
+
+    <TextView
+        android:id="@+id/category1"
+        android:layout_width="200dp"
+        android:layout_height="50dp"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:textColor="#FFFFFF"
+        android:textSize="20sp"
+        android:layout_above="@+id/category2"
+        android:layout_alignStart="@+id/category2" />
+
+    <TextView
+        android:id="@+id/category2"
+        android:layout_width="200dp"
+        android:layout_height="50dp"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:textColor="#FFFFFF"
+        android:textSize="20sp"
+        android:layout_above="@+id/category3"
+        android:layout_centerHorizontal="true" />
+
+    <TextView
+        android:id="@+id/category3"
+        android:layout_width="200dp"
+        android:layout_height="50dp"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:textColor="#FFFFFF"
+        android:textSize="20sp"
+        android:layout_centerVertical="true"
+        android:layout_alignStart="@+id/category2" />
+      
+
+</RelativeLayout>
+
+</LinearLayout>
+
+

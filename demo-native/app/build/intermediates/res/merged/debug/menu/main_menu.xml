@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+    
+    <item
+        android:id="@+id/background"
+        android:title="@string/action_settings"/>
+        android:showAsAction="never"
+    <item
+        android:id="@+id/toast"
+        android:title="@string/action_settings"/>
+        android:showAsAction="never"
+
+</menu>
+<!-- From: file:/Users/Akshit/Documents/apps-android/demo-native/app/src/main/res/menu/main_menu.xml -->
