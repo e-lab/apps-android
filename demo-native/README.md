@@ -8,3 +8,9 @@
 - Compile app.
 - Android Studio may or may not give errors. If you see an error, click the "Fix now" link, and then compile again. This may happen a few times.
 - Once all the errors have been fixed, then app can be run.
+
+
+ERRORS:
+
+modify this if you need:
+`def ndkDir = '/Developer/android-ndk-r10e'//android.ndkDirectory.getAbsolutePath()`
