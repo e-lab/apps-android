@@ -29,8 +29,8 @@ static void nn_unfolded_copy(THFloatTensor *finput, THFloatTensor *input,
 				} else {
 					if (dW==1){
 						ix = (long long)(0 - padW + kw);
-						lpad = fmaxf(0,padW-kw);
-						rpad = fmaxf(0,padW-(kW-kw-1));
+						lpad = thfmaxf(0,padW-kw);
+						rpad = thfmaxf(0,padW-(kW-kw-1));
 						if (outputWidth-rpad-lpad <= 0) {
 							memset(dst+(y*outputWidth), 0, sizeof(float)*outputWidth);
 						} else {
@@ -86,7 +86,7 @@ static void nn_SpatialConvolutionMM_updateOutput_frame(THFloatTensor *input, THF
 	for (i = 0; i < nOutputPlane; i++)
 	{
 		float *data = output->storage->data + output->storageOffset + output->stride[0]*i;
-		float what = bias->storage->data[i];
+		float what = bias && bias->storage ? THFloatTensor_data(bias)[i] : 0;
 		long len = outputHeight*outputWidth;
 		THFloatVector_fill(data, what, len);
 	}
@@ -99,7 +99,6 @@ static void nn_SpatialConvolutionMM_updateOutput_frame(THFloatTensor *input, THF
 #ifndef USEBLAS
 	else THFloatTensor_convmm(output, 1, 1, weight, input, kH, kW, dH, dW, padH, padW);
 #endif
-
 }
 
 THFloatTensor *nn_SpatialConvolutionMM_updateOutput(struct module *module, THFloatTensor *input)
@@ -130,6 +129,8 @@ THFloatTensor *nn_SpatialConvolutionMM_updateOutput(struct module *module, THFlo
 	long outputWidth  = (inputWidth + 2*padW - kW) / dW + 1;
 	long outputHeight = (inputHeight + 2*padH - kH) / dH + 1;
 
+	if(nInputPlane != input->size[1])
+		THError("nInputPlane %ld does not match input planes %ld", nInputPlane, input->size[1]);
 
 	if (outputWidth < 1 || outputHeight < 1)
 		THError("Given input size: (%dx%dx%d). Calculated output size: (%dx%dx%d). Output size is too small",

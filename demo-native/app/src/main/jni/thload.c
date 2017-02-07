@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "thnets.h"
-#include "android_fopen.h"
 
 struct thfile
 {
@@ -182,10 +181,14 @@ static int readtorchstorage(const char *type, struct thfile *f, struct thobject 
 	if(readlong(f, &obj->storage->nelem))
 		return ERR_READFILE;
 	obj->storage->data = malloc(obj->storage->nelem * ss);
+	if(!obj->storage->data)
+		THError("Out of memory trying to allocate %ld bytes", obj->storage->nelem * ss);
 	if(obj->storage->scalartype == TYPE_LONG && f->longsize > 0 && f->longsize == 4 && sizeof(long) == 8)
 	{
 		long i;
 		int *tmp = malloc(obj->storage->nelem * 4);
+		if(!tmp)
+			THError("Out of memory trying to allocate %ld bytes", obj->storage->nelem * 4);
 		if(fread(tmp, 4, obj->storage->nelem, f->fp) != obj->storage->nelem)
 			return ERR_READFILE;
 		for(i = 0; i < obj->storage->nelem; i++)
@@ -195,6 +198,8 @@ static int readtorchstorage(const char *type, struct thfile *f, struct thobject 
 	{
 		long i;
 		long *tmp = malloc(obj->storage->nelem * 8);
+		if(!tmp)
+			THError("Out of memory trying to allocate %ld bytes", obj->storage->nelem * 8);
 		if(fread(tmp, 8, obj->storage->nelem, f->fp) != obj->storage->nelem)
 			return ERR_READFILE;
 		for(i = 0; i < obj->storage->nelem; i++)
@@ -402,7 +407,7 @@ static int readobject(struct thfile *f, struct thobject *obj)
 
 int loadtorch(const char *path, struct thobject *obj, int longsize)
 {
-	FILE *fp = android_fopen(path, "rb");
+	FILE *fp = fopen(path, "rb");
 	if(!fp)
 		return ERR_OPENFILE;
 	struct thfile *f = malloc(sizeof(*f));
@@ -464,6 +469,10 @@ int printobject(struct thobject *obj, int indent)
 			printf("%s tensor of dimension %d (", scalarname(obj->tensor->scalartype), obj->tensor->ndim);
 			for(i = 0; i < obj->tensor->ndim; i++)
 				printf("%ld%s", obj->tensor->size[i], i == obj->tensor->ndim - 1 ? ")\n" : ",");
+			printindent(indent);
+			printf("offset = %ld, strides = (", obj->tensor->storageoffset);
+			for(i = 0; i < obj->tensor->ndim; i++)
+				printf("%ld%s", obj->tensor->stride[i], i == obj->tensor->ndim - 1 ? ")\n" : ",");
 		}
 		break;
 	case TYPE_NNMODULE:
@@ -705,12 +714,16 @@ struct object2module object2module[] =
 	{"nn.SpatialConvolutionMM", nnload_SpatialConvolution},
 	{"nn.SpatialConvolution", nnload_SpatialConvolution},
 	{"nn.SpatialMaxPooling", nnload_SpatialMaxPooling},
+	{"nn.SpatialAveragePooling", nnload_SpatialAveragePooling},
 	{"nn.Linear", nnload_Linear},
 	{"nn.SoftMax", nnload_SoftMax},
 	{"nn.Threshold", nnload_Threshold},
 	{"nn.ReLU", nnload_Threshold},
 	{"nn.View", nnload_View},
 	{"nn.Dropout", nnload_Dropout},
+	{"nn.Padding", nnload_Dropout},	// Danger, it will only work for E-net and similar cases
+	{"nn.SpatialDropout", nnload_Dropout},
+	{"nn.Identity", nnload_Dropout},
 	{"nn.SpatialZeroPadding", nnload_SpatialZeroPadding},
 	{"nn.Reshape", nnload_Reshape},
 	{"nn.Normalize", nnload_Normalize},
@@ -718,29 +731,33 @@ struct object2module object2module[] =
 	{"nn.SpatialFullConvolution", nnload_SpatialFullConvolution},
 	{"nn.SpatialMaxUnpooling", nnload_SpatialMaxUnpooling},
 	{"nn.SpatialBatchNormalization", nnload_SpatialBatchNormalization},
+	{"nn.Sequential", nnload_Sequential},
+	{"nn.Concat", nnload_Concat},
+	{"nn.ConcatTable", nnload_ConcatTable},
+	{"nn.JoinTable", nnload_JoinTable},
+	{"nn.CAddTable", nnload_CAddTable},
+	{"nn.PReLU", nnload_PReLU},
 	{0,0}
 };
 
-struct network *Object2Network(struct thobject *obj)
+struct network *Module2Network(struct nnmodule *mod)
 {
 	struct network *net;
 	struct table *mt;
 	int i, j;
 	
-	if(obj->type != TYPE_NNMODULE)
+	if(strcmp(mod->name, "nn.Sequential") && strcmp(mod->name, "nn.Concat") && strcmp(mod->name, "nn.ConcatTable"))
 		return 0;
-	if(strcmp(obj->nnmodule->name, "nn.Sequential"))
-		return 0;
-	for(i = 0; i < obj->nnmodule->table->nelem; i++)
+	for(i = 0; i < mod->table->nelem; i++)
 	{
-		if(!strcmp(obj->nnmodule->table->records[i].name.string.data, "modules"))
+		if(!strcmp(mod->table->records[i].name.string.data, "modules"))
 			break;
 	}
-	if(i == obj->nnmodule->table->nelem)
+	if(i == mod->table->nelem)
 		return 0;
 	net = malloc(sizeof(*net));
-	net->cuda = 0;
-	mt = obj->nnmodule->table->records[i].value.table;
+	net->engine = ENGINE_CPU;
+	mt = mod->table->records[i].value.table;
 	net->nelem = mt->nelem;
 	net->modules = calloc(mt->nelem, sizeof(*net->modules));
 	for(i = 0; i < mt->nelem; i++)

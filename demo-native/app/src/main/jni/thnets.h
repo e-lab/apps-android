@@ -1,7 +1,12 @@
 #include <float.h>
+#include <stdlib.h>
 #include "thvector.h"
 #ifdef MEMORYDEBUG
-#include "memory.h"
+#include "memorydebug.h"
+#endif
+
+#ifdef OPENCL
+#include "CL/opencl.h"
 #endif
 
 enum therror {
@@ -68,7 +73,7 @@ struct tensor {
 	long *stride;
 	long storageoffset;
 	struct storage *storage;
-} tensor;
+};
 
 struct thobject
 {
@@ -95,7 +100,7 @@ struct threcord {
 typedef struct THFloatStorage
 {
     float *data;
-	int nref, mustfree;
+	int nref, mustfree;	// mustfree = 0 (allocated somewhere else), 1 (free), 2 (cuda free)
 } THFloatStorage;
 
 typedef struct THFloatTensor
@@ -105,6 +110,9 @@ typedef struct THFloatTensor
     int nDimension;    
 	THFloatStorage *storage;
 	long storageOffset;
+#ifdef LOWP
+	float sub, mult;
+#endif
 } THFloatTensor;
 
 struct SpatialConvolution
@@ -126,6 +134,12 @@ struct SpatialMaxPooling
 	int padW, padH, dW, dH, kW, kH, ceil_mode;
 	int iwidth, iheight;
 	THFloatTensor *indices;
+};
+
+struct SpatialAveragePooling
+{
+	int padW, padH, dW, dH, kW, kH, ceil_mode;
+	int iwidth, iheight, count_include_pad;
 };
 
 struct Linear
@@ -173,12 +187,36 @@ struct SpatialBatchNormalization
 	double eps;
 };
 
+struct Concat
+{
+	struct module *modules;
+	int nelem, dimension;
+};
+
+struct Sequential
+{
+	struct module *modules;
+	int nelem;
+};
+
+struct PReLU
+{
+	THFloatTensor *weight;
+	int nOutputPlane;
+};
+
+struct Padding
+{
+	float dim, pad, nInputDim, index, value;
+};
+
 enum moduletype {
 	MT_Nil,
 	MT_SpatialConvolutionMM,
 	MT_SpatialConvolutionVirtMM,
 	MT_SpatialConvolution,
 	MT_SpatialMaxPooling,
+	MT_SpatialAveragePooling,
 	MT_Linear,
 	MT_SoftMax,
 	MT_Threshold,
@@ -189,7 +227,15 @@ enum moduletype {
 	MT_Normalize,
 	MT_SpatialFullConvolution,
 	MT_SpatialMaxUnpooling,
-	MT_SpatialBatchNormalization
+	MT_SpatialBatchNormalization,
+	MT_Sequential,
+	MT_Concat,
+	MT_ConcatTable,
+	MT_JoinTable,
+	MT_CAddTable,
+	MT_PReLU,
+	MT_Identity,
+	MT_Padding
 };
 
 struct network;
@@ -202,9 +248,14 @@ struct module
 	THFloatTensor *output;
 	struct network *net;
 	struct nnmodule *nnmodule;
+#ifdef OPENCL
+	cl_kernel kernel;
+	int clstatus;
+#endif
 	union {
 		struct SpatialConvolution SpatialConvolution;
 		struct SpatialMaxPooling SpatialMaxPooling;
+		struct SpatialAveragePooling SpatialAveragePooling;
 		struct Linear Linear;
 		struct Threshold Threshold;
 		struct View View;
@@ -214,12 +265,19 @@ struct module
 		struct SpatialFullConvolution SpatialFullConvolution;
 		struct SpatialMaxUnpooling SpatialMaxUnpooling;
 		struct SpatialBatchNormalization SpatialBatchNormalization;
+		struct Sequential Sequential;
+		struct Concat Concat;
+		struct Sequential ConcatTable;
+		struct Concat JoinTable;
+		struct PReLU PReLU;
 	};
 };
 
+enum {ENGINE_CPU, ENGINE_CUDA, ENGINE_OPENCL, ENGINE_OPENCLINIT, ENGINE_LOWP};
+
 struct network
 {
-	int nelem, cuda;
+	int nelem, engine;
 	struct module *modules;
 };
 
@@ -272,9 +330,15 @@ void THFloatTensor_addmv(THFloatTensor *r_, float beta, THFloatTensor *t, float 
 void THFloatTensor_conv2Dmm(THFloatTensor *r_, float beta, float alpha, THFloatTensor *t_, THFloatTensor *k_, long srow, long scol, const char *vf, const char *xc);
 void THFloatTensor_conv2Dmv(THFloatTensor *r_, float beta, float alpha, THFloatTensor *t_, THFloatTensor *k_, long srow, long scol, const char *vf, const char *xc);
 
-#define fmaxf(a,b) ((a) > (b) ? (a) : (b))
-#define fminf(a,b) ((a) < (b) ? (a) : (b))
+#define thfmaxf(a,b) ((a) > (b) ? (a) : (b))
+#define thfminf(a,b) ((a) < (b) ? (a) : (b))
+
 #define THInf FLT_MAX
+
+#ifdef HAVEFP16
+void tofp16(__fp16 *dst, const float *src, size_t len);
+void fromfp16(float *dst, const __fp16 *src, size_t len);
+#endif
 
 int loadtorch(const char *path, struct thobject *obj, int longsize);
 int printobject(struct thobject *obj, int indent);
@@ -282,13 +346,15 @@ int freeobject(struct thobject *obj);
 void freenetwork(struct network *net);
 THFloatTensor *forward(struct network *net, THFloatTensor *in);
 THFloatTensor *THFloatTensor_newFromObject(struct thobject *obj);
-struct network *Object2Network(struct thobject *obj);
+struct network *Module2Network(struct nnmodule *obj);
 void printtensor(THFloatTensor *t);
 void blas_init();
+double th_seconds();
 
 THFloatTensor *nn_SpatialConvolutionMM_updateOutput(struct module *module, THFloatTensor *input);
 THFloatTensor *nn_SpatialConvolution_updateOutput(struct module *module, THFloatTensor *input);
 THFloatTensor *nn_SpatialMaxPooling_updateOutput(struct module *module, THFloatTensor *input);
+THFloatTensor *nn_SpatialAveragePooling_updateOutput(struct module *module, THFloatTensor *input);
 THFloatTensor *nn_Threshold_updateOutput(struct module *module, THFloatTensor *input);
 THFloatTensor *nn_View_updateOutput(struct module *module, THFloatTensor *input);
 THFloatTensor *nn_SoftMax_updateOutput(struct module *module, THFloatTensor *input);
@@ -300,9 +366,17 @@ THFloatTensor *nn_Normalize_updateOutput(struct module *module, THFloatTensor *i
 THFloatTensor *nn_SpatialFullConvolution_updateOutput(struct module *module, THFloatTensor *input);
 THFloatTensor *nn_SpatialMaxUnpooling_updateOutput(struct module *module, THFloatTensor *input);
 THFloatTensor *nn_SpatialBatchNormalization_updateOutput(struct module *module, THFloatTensor *input);
+THFloatTensor *nn_Sequential_updateOutput(struct module *module, THFloatTensor *input);
+THFloatTensor *nn_Concat_updateOutput(struct module *module, THFloatTensor *input);
+THFloatTensor *nn_ConcatTable_updateOutput(struct module *module, THFloatTensor *input);
+THFloatTensor *nn_JoinTable_updateOutput(struct module *module, THFloatTensor *input);
+THFloatTensor *nn_CAddTable_updateOutput(struct module *module, THFloatTensor *input);
+THFloatTensor *nn_PReLU_updateOutput(struct module *module, THFloatTensor *input);
+THFloatTensor *nn_Identity_updateOutput(struct module *module, THFloatTensor *input);
 
 int nnload_SpatialConvolution(struct module *mod, struct nnmodule *n);
 int nnload_SpatialMaxPooling(struct module *mod, struct nnmodule *n);
+int nnload_SpatialAveragePooling(struct module *mod, struct nnmodule *n);
 int nnload_Threshold(struct module *mod, struct nnmodule *n);
 int nnload_View(struct module *mod, struct nnmodule *n);
 int nnload_SoftMax(struct module *mod, struct nnmodule *n);
@@ -314,6 +388,14 @@ int nnload_Normalize(struct module *mod, struct nnmodule *n);
 int nnload_SpatialFullConvolution(struct module *mod, struct nnmodule *n);
 int nnload_SpatialMaxUnpooling(struct module *mod, struct nnmodule *n);
 int nnload_SpatialBatchNormalization(struct module *mod, struct nnmodule *n);
+int nnload_Sequential(struct module *mod, struct nnmodule *n);
+int nnload_Concat(struct module *mod, struct nnmodule *n);
+int nnload_ConcatTable(struct module *mod, struct nnmodule *n);
+int nnload_JoinTable(struct module *mod, struct nnmodule *n);
+int nnload_CAddTable(struct module *mod, struct nnmodule *n);
+int nnload_PReLU(struct module *mod, struct nnmodule *n);
+int nnload_Identity(struct module *mod, struct nnmodule *n);
+
 
 /* High level API */
 
@@ -328,17 +410,29 @@ typedef struct thnetwork
 
 void THInit();
 THNETWORK *THLoadNetwork(const char *path);
-void THMakeSpatial(THNETWORK *network);
+void THMakeSpatial(THNETWORK *network, int size);
 int THProcessFloat(THNETWORK *network, float *data, int batchsize, int width, int height, float **result, int *outwidth, int *outheight);
 int THProcessImages(THNETWORK *network, unsigned char **images, int batchsize, int width, int height, int stride, float **result, int *outwidth, int *outheight, int bgr);
 int THProcessYUYV(THNETWORK *network, unsigned char *image, int width, int height, float **results, int *outwidth, int *outheight);
 THNETWORK *THCreateCudaNetwork(THNETWORK *net);
+THNETWORK *THCreateOpenCLNetwork(THNETWORK *net);
+THNETWORK *THCreateLowpNetwork(THNETWORK *net, float range);
 int THCudaHalfFloat(int enable);
+int THOpenCLHalfFloat(int enable);
 int THUseSpatialConvolutionMM(THNETWORK *network, int mm_type);
 void THFreeNetwork(THNETWORK *network);
 int THLastError();
-int th_debug;
+extern int th_debug, th_profile, th_minmax;
+extern double th_convtot, th_convflops;
 
 #ifdef CUDNN
 #include "cudnn/cudnn_th.h"
+#endif
+
+#ifdef OPENCL
+#include "opencl/opencl_th.h"
+#endif
+
+#ifdef LOWP
+#include "lowp/lowp.h"
 #endif

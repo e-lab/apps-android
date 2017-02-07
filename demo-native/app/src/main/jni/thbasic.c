@@ -41,6 +41,11 @@ void THFloatStorage_free(THFloatStorage *s)
 			cudaFree(s->data);
 		else
 #endif
+#ifdef OPENCL
+		if(s->mustfree == 3)
+			clReleaseMemObject((cl_mem)s->data);
+		else
+#endif
 		if(s->mustfree)
 			free(s->data);
 		free(s);
@@ -52,6 +57,7 @@ void THFloatTensor_resize(THFloatTensor *t, long *size, int nDimension)
 	int i;
 	long stride = 1;
 
+	long nelem = THFloatTensor_nElement(t);
 	t->nDimension = nDimension;
 	memcpy(t->size, size, nDimension * sizeof(*t->size));
 	for(i = nDimension - 1; i >= 0; i--)
@@ -59,8 +65,12 @@ void THFloatTensor_resize(THFloatTensor *t, long *size, int nDimension)
 		t->stride[i] = stride;
 		stride *= t->size[i];
 	}
-	if(!t->storage)
-		t->storage = THFloatStorage_new(stride);
+	if(nelem != THFloatTensor_nElement(t))
+	{
+		if(t->storage)
+			t->storage->data = realloc(t->storage->data, sizeof(*t->storage->data) * stride);
+		else t->storage = THFloatStorage_new(stride);
+	}
 }
 
 void THFloatTensor_resize4d(THFloatTensor *t, long size0, long size1, long size2, long size3)
@@ -75,10 +85,12 @@ void THFloatTensor_resize4d(THFloatTensor *t, long size0, long size1, long size2
 	t->stride[2] = size3;
 	t->stride[1] = size2 * size3;
 	t->stride[0] = size1 * size2 * size3;
-	if(!t->storage)
-		t->storage = THFloatStorage_new(size0 * size1 * size2 * size3);
-	else if(nElement != size0 * size1 * size2 * size3)
-		t->storage->data = realloc(t->storage->data, sizeof(*t->storage->data) * size0 * size1 * size2 * size3);
+	if(nElement != size0 * size1 * size2 * size3)
+	{
+		if(t->storage)
+			t->storage->data = realloc(t->storage->data, sizeof(*t->storage->data) * size0 * size1 * size2 * size3);
+		else t->storage = THFloatStorage_new(size0 * size1 * size2 * size3);
+	}
 }
 
 void THFloatTensor_resize3d(THFloatTensor *t, long size0, long size1, long size2)
@@ -91,10 +103,12 @@ void THFloatTensor_resize3d(THFloatTensor *t, long size0, long size1, long size2
 	t->stride[2] = 1;
 	t->stride[1] = size2;
 	t->stride[0] = size1 * size2;
-	if(!t->storage)
-		t->storage = THFloatStorage_new(size0 * size1 * size2);
-	else if(nElement != size0 * size1 * size2)
-		t->storage->data = realloc(t->storage->data, sizeof(*t->storage->data) * size0 * size1 * size2);
+	if(nElement != size0 * size1 * size2)
+	{
+		if(t->storage)
+			t->storage->data = realloc(t->storage->data, sizeof(*t->storage->data) * size0 * size1 * size2);
+		else t->storage = THFloatStorage_new(size0 * size1 * size2);
+	}
 }
 
 void THFloatTensor_resize2d(THFloatTensor *t, long size0, long size1)
@@ -105,10 +119,12 @@ void THFloatTensor_resize2d(THFloatTensor *t, long size0, long size1)
 	t->size[1] = size1;
 	t->stride[1] = 1;
 	t->stride[0] = size1;
-	if(!t->storage)
-		t->storage = THFloatStorage_new(size0 * size1);
-	else if(nElement != size0 * size1)
-		t->storage->data = realloc(t->storage->data, sizeof(*t->storage->data) * size0 * size1);
+	if(nElement != size0 * size1)
+	{
+		if(t->storage)
+			t->storage->data = realloc(t->storage->data, sizeof(*t->storage->data) * size0 * size1);
+		else t->storage = THFloatStorage_new(size0 * size1);
+	}
 }
 
 void THFloatTensor_resize1d(THFloatTensor *t, long size0)
@@ -117,10 +133,12 @@ void THFloatTensor_resize1d(THFloatTensor *t, long size0)
 	t->nDimension = 1;
 	t->size[0] = size0;
 	t->stride[0] = 1;
-	if(!t->storage)
-		t->storage = THFloatStorage_new(size0);
-	else if(nElement != size0)
-		t->storage->data = realloc(t->storage->data, sizeof(*t->storage->data) * size0);
+	if(nElement != size0)
+	{
+		if(t->storage)
+			t->storage->data = realloc(t->storage->data, sizeof(*t->storage->data) * size0);
+		else t->storage = THFloatStorage_new(size0);
+	}
 }
 
 void THError(const char *fmt, ...)
@@ -148,6 +166,10 @@ THFloatTensor *THFloatTensor_newSelect(THFloatTensor *tensor, int dimension, lon
 	int i;
 
 	THFloatTensor *t = malloc(sizeof(*t));
+#ifdef LOWP
+	t->mult = tensor->mult;
+	t->sub = tensor->sub;
+#endif
 	t->nDimension = tensor->nDimension - 1;
 	t->storageOffset = sliceIndex * tensor->stride[dimension];
 	for(i = 0; i < dimension; i++)
@@ -196,13 +218,12 @@ void THFloatTensor_resizeAs(THFloatTensor *tdst, THFloatTensor *tsrc)
 {
 	if(tsrc == tdst)
 		return;
+	long nelemdst = THFloatTensor_nElement(tdst);
 	long nelemsrc = THFloatTensor_nElement(tsrc);
 	tdst->nDimension = tsrc->nDimension;
 	memcpy(tdst->size, tsrc->size, sizeof(tsrc->size));
 	memcpy(tdst->stride, tsrc->stride, sizeof(tsrc->stride));
-	if(!tdst->storage)
-		tdst->storage = THFloatStorage_new(nelemsrc);
-	else if(nelemsrc != THFloatTensor_nElement(tdst))
+	if(nelemsrc != nelemdst)
 	{
 		if(tdst->storage)
 			tdst->storage->data = realloc(tdst->storage->data, sizeof(*tdst->storage->data) * nelemsrc);
@@ -291,7 +312,11 @@ void THFloatTensor_fill(THFloatTensor *t, float value)
 
 void THFloatTensor_copy(THFloatTensor *tdst, THFloatTensor *tsrc)
 {
-	memcpy(tdst->storage->data, tsrc->storage->data, sizeof(*tdst->storage->data) * THFloatTensor_nElement(tsrc));
+	float *src, *dst;
+
+	src = THFloatTensor_data(tsrc);
+	dst = THFloatTensor_data(tdst);
+	memcpy(dst, src, sizeof(*dst) * THFloatTensor_nElement(tsrc));
 }
 
 void THFloatTensor_transpose(THFloatTensor *tdst, THFloatTensor *tsrc, int dimension1, int dimension2)
@@ -951,4 +976,24 @@ void THFloatTensor_convmm(THFloatTensor *r, float beta, float alpha, THFloatTens
 	args.padH = padH;
 	sgemmargs(&args);
 }
+#endif
+
+#ifdef HAVEFP16
+
+void tofp16(__fp16 *dst, const float *src, size_t len)
+{
+	size_t i;
+
+	for(i = 0; i < len; i++)
+		dst[i] = src[i];
+}
+
+void fromfp16(float *dst, const __fp16 *src, size_t len)
+{
+	size_t i;
+
+	for(i = 0; i < len; i++)
+		dst[i] = src[i];
+}
+
 #endif

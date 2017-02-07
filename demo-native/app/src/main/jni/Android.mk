@@ -11,10 +11,10 @@ LOCAL_SRC_FILES :=\
     OpenBLAS-stripped/gemm_beta.c \
     OpenBLAS-stripped/gemv_t.c \
     OpenBLAS-stripped/copy.c \
-    OpenBLAS-stripped/axpy_vfp.S \
-  	OpenBLAS-stripped/sgemm_kernel_4x4_vfpv3.S \
-    OpenBLAS-stripped/sgemm_ncopy_4_vfp.S \
-    OpenBLAS-stripped/sgemm_tcopy_4_vfp.S
+    OpenBLAS-stripped/arm/axpy_vfp.S \
+  	OpenBLAS-stripped/arm/sgemm_kernel_4x4_vfpv3.S \
+    OpenBLAS-stripped/arm/sgemm_ncopy_4_vfp.S \
+    OpenBLAS-stripped/arm/sgemm_tcopy_4_vfp.S
 
 LOCAL_CFLAGS += -Wall -c -fopenmp -fPIC -DARM -D__NEON__ -mcpu=cortex-a9 -mfpu=neon -O3 -DUSEBLAS
 
@@ -62,7 +62,28 @@ LOCAL_CFLAGS += -fopenmp
 
 FILE_LIST := $(wildcard $(LOCAL_PATH)/modules/*.c)
 
-LOCAL_SRC_FILES := thload.c thbasic.c thapi.c $(FILE_LIST:$(LOCAL_PATH)/%=%) images.c android_fopen.c nativeProcessor.c
+LOCAL_SRC_FILES := thload.c thbasic.c thapi.c nativeProcessor.c android_fopen.c \
+	modules/CAddTable.c \
+	modules/Concat.c \
+	modules/ConcatTable.c \
+	modules/Dropout.c \
+	modules/JoinTable.c \
+	modules/Linear.c \
+	modules/Normalize.c \
+	modules/PReLu.c \
+	modules/Reshape.c \
+	modules/Sequential.c \
+	modules/SoftMax.c \
+	modules/SpatialAveragePooling.c \
+	modules/SpatialBatchNormalization.c \
+	modules/SpatialConvolution.c \
+	modules/SpatialConvolutionMM.c \
+	modules/SpatialFullConvolution.c \
+	modules/SpatialMaxPooling.c \
+	modules/SpatialMaxUnpooling.c \
+	modules/SpatialZeroPadding.c \
+	modules/Threshold.c \
+	modules/View.c
 
 LOCAL_LDLIBS := -lz -landroid -lm -llog
 

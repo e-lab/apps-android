@@ -32,6 +32,7 @@ public class MainActivity extends Activity {
 
     int screenwidth, screenheight;
 	int fps = 0;
+    int nativeerror;
 	Camera myCamera;
 
     MyCameraSurfaceView myCameraSurfaceView;
@@ -70,7 +71,7 @@ public class MainActivity extends Activity {
      */
 	public void initialize(){
         nativeAPI = new NativeProcessor();
-        nativeAPI.init(getAssets());
+        nativeerror = nativeAPI.init(getAssets());
 
         telegrafico = Typeface.createFromAsset(getAssets(), "telegrafico.ttf");
         mainlayout = (RelativeLayout) findViewById(R.id.background);
@@ -163,7 +164,9 @@ public class MainActivity extends Activity {
         public void onClick(View v) {
             // TODO Auto-generated method stub
 
-            if (recording) {
+            if(nativeerror != 0)
+                Toast.makeText(MainActivity.this, "No network found in /sdcard/demo-native",Toast.LENGTH_LONG).show();
+            else if (recording) {
             	recording = false;
                 //Turn back to red button
                 recordingState.animate().setDuration(250).alpha(0).setListener(new AnimatorListenerAdapter() {

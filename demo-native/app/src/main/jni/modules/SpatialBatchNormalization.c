@@ -31,16 +31,17 @@ THFloatTensor *nn_SpatialBatchNormalization_updateOutput(struct module *module, 
 	THFloatTensor *running_var = module->SpatialBatchNormalization.running_var;
 	THFloatTensor *weight = module->SpatialBatchNormalization.weight;
 	THFloatTensor *bias = module->SpatialBatchNormalization.bias;
-	long nFeature = input->size[1];
+	long nFeature = input->nDimension == 4 ? input->size[1] : input->size[0];
 
 	double eps = module->SpatialBatchNormalization.eps;
 	THFloatTensor_resizeAs(output, input);
 	long f;
+
 #pragma omp parallel for
 	for (f = 0; f < nFeature; ++f)
 	{
-		THFloatTensor *in = THFloatTensor_newSelect(input, 1, f);
-		THFloatTensor *out = THFloatTensor_newSelect(output, 1, f);
+		THFloatTensor *in = THFloatTensor_newSelect(input, input->nDimension == 4 ? 1 : 0, f);
+		THFloatTensor *out = THFloatTensor_newSelect(output, input->nDimension == 4 ? 1 : 0, f);
 
 		float mean, invstd;
 
@@ -57,7 +58,7 @@ THFloatTensor *nn_SpatialBatchNormalization_updateOutput(struct module *module, 
 		if(in->nDimension == 1)
 		{
 			long i;
-			for(i = 0; in->size[0]; i++)
+			for(i = 0; i < in->size[0]; i++)
 				outd[out->stride[0] * i] = ((ind[in->stride[0] * i] - mean) * invstd) * w + b;
 		} else if(in->nDimension == 2)
 		{
@@ -71,7 +72,7 @@ THFloatTensor *nn_SpatialBatchNormalization_updateOutput(struct module *module, 
 			long i, j, k;
 			for(i = 0; i < in->size[0]; i++)
 				for(j = 0; j < in->size[1]; j++)
-					for(k = 0; k < in->size[1]; k++)
+					for(k = 0; k < in->size[2]; k++)
 						outd[out->stride[0] * i + out->stride[1] * j + out->stride[2] * k] =
 							((ind[in->stride[0] * i + in->stride[1] * j + in->stride[2] * k] - mean) * invstd) * w + b;
 		} else THError("SpatialBatchNormalization not supported for input dimensions higher of 4");

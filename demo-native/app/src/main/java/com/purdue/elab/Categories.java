@@ -6,6 +6,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.FileInputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,7 +32,8 @@ public class Categories {
         int count = 0;
         BufferedReader reader = null;
         try {
-            reader = new BufferedReader(new InputStreamReader(context.getAssets().open("Networks/generic/categories.txt")));
+            //reader = new BufferedReader(new InputStreamReader(context.getAssets().open("Networks/generic/categories.txt")));
+            reader = new BufferedReader(new InputStreamReader(new FileInputStream("/sdcard/demo-native/categories.txt")));
             String mLine;
             while ((mLine = reader.readLine()) != null) {
                 //System.err.println(mLine);

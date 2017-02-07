@@ -30,6 +30,10 @@ jintArray r, jintArray g, jintArray b)
     int outwidth, outheight;
 
 
+    if(!net)
+    {
+        return (*env)->NewFloatArray(env, 0);
+    }
     jint *redPixels = (*env)->GetIntArrayElements(env, r, NULL);
     jint *greenPixels = (*env)->GetIntArrayElements(env, g, NULL);
     jint *bluePixels = (*env)->GetIntArrayElements(env, b, NULL);
@@ -58,19 +62,22 @@ jintArray r, jintArray g, jintArray b)
 /**
  * Set up the system to allow native processing.
  */
-void Java_com_purdue_elab_NativeProcessor_init(JNIEnv* env, jobject thiz, jobject assetManager) {
+int Java_com_purdue_elab_NativeProcessor_init(JNIEnv* env, jobject thiz, jobject assetManager) {
 
     // get native asset manager. This allows access to files stored in the assets folder
-    AAssetManager* manager = AAssetManager_fromJava(env, assetManager);
+    AAssetManager* manager = (AAssetManager *)AAssetManager_fromJava(env, assetManager);
     android_fopen_set_asset_manager(manager);
 
     THInit();
 
-    net = THLoadNetwork("Networks/generic");
+    //net = THLoadNetwork("Networks/generic");
+    net = THLoadNetwork("/sdcard/demo-native");
     if(net) {
+        THUseSpatialConvolutionMM(net, 2);
+        return 0;
 
     } else {
         D("Shiiiiit went down.");
+        return -1;
     }
-    THUseSpatialConvolutionMM(net, 2);
 }
