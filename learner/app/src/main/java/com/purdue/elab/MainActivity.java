@@ -167,7 +167,7 @@ public class MainActivity extends Activity {
             // TODO Auto-generated method stub
 
             if(nativeerror != 0)
-                Toast.makeText(MainActivity.this, "No network found in /sdcard/demo-native",Toast.LENGTH_LONG).show();
+                Toast.makeText(MainActivity.this, "No network found in /sdcard/neural-nets",Toast.LENGTH_LONG).show();
             else if (recording) {
             	recording = false;
                 //Turn back to red button

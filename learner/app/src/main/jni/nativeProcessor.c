@@ -67,7 +67,7 @@ int Java_com_purdue_elab_NativeProcessor_init(JNIEnv* env, jobject thiz, jobject
     THInit();
 
     //net = THLoadNetwork("Networks/generic");
-    net = THLoadNetwork("/sdcard/demo-native");
+    net = THLoadNetwork("/sdcard/neural-nets");
     if(net) {
         THUseSpatialConvolutionMM(net, 2);
         if(dropclassifier)
