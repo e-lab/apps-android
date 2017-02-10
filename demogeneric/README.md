@@ -1,6 +1,6 @@
 # Installation
 
-- manually copy: model.net categories.txt files in /sdcard/demo-native
+- manually copy: model.net categories.txt files in /sdcard/neural-nets
 
 - Install Android Studio from: http://developer.android.com/sdk/index.html
 - Install latest API through Android Studio. Tutorial: http://developer.android.com/sdk/installing/adding-packages.html
