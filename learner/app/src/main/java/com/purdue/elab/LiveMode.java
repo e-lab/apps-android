@@ -58,6 +58,7 @@ public class LiveMode{
 
 	float distance(float[] a, float b[])
 	{
+		//Calculate the cosine distance
 		float num = 0, den1 = 0, den2 = 0;
 		for(int i = 0; i < a.length; i++)
 		{
@@ -116,7 +117,7 @@ public class LiveMode{
 					}
 				}
 			}
-			context.ProtoFound(best);
+			context.ProtoFound(best, min);
 		} else {
 			max[0] = 0;
 			max[1] = 0;

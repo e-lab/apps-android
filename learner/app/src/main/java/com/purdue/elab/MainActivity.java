@@ -16,12 +16,15 @@ import android.hardware.Camera.Parameters;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.Display;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
+import android.widget.EditText;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
@@ -49,12 +52,15 @@ public class MainActivity extends Activity {
     Button myset;
     Button[] protos;
     BitmapDrawable[][] protobmps;
+    String[] objectnames;
+    int editingobject;
     TextView resultField1;
     TextView resultField2;
     TextView resultField3;
     TextView fpsField;
     TextView live;
     View recordingState;
+    EditText objectName;
 
 	RelativeLayout mainlayout;
 
@@ -74,7 +80,7 @@ public class MainActivity extends Activity {
     /**
      *
      */
-	public void initialize(){
+	public void initialize() {
         nativeAPI = new NativeProcessor();
         nativeerror = nativeAPI.init(getAssets(), learner);
 
@@ -88,23 +94,26 @@ public class MainActivity extends Activity {
         myButton = (Button) findViewById(R.id.buttonstart);
         myButton.setOnClickListener(myButtonOnClickListener);
         recordingState = (View) findViewById(R.id.recordingState);
-        switchCamera = (Button)findViewById(R.id.camera);
+        switchCamera = (Button) findViewById(R.id.camera);
         switchCamera.setOnClickListener(switchCameraOnClickListener);
 
         resultField1 = (TextView) findViewById(R.id.category1);
         resultField2 = (TextView) findViewById(R.id.category2);
         resultField3 = (TextView) findViewById(R.id.category3);
         fpsField = (TextView) findViewById(R.id.fps);
-        myset = (Button)findViewById(R.id.mysettings);
+        myset = (Button) findViewById(R.id.mysettings);
         myset.setOnClickListener(mySettingsOnClickListener);
 
         bebasNeue = Typeface.createFromAsset(getAssets(), "BebasNeue.otf");
         openSans = Typeface.createFromAsset(getAssets(), "OpenSans.ttf");
 
+
+        objectName = (EditText) findViewById(R.id.editTextObjectName);
         resultField1.setTypeface(bebasNeue);
         resultField2.setTypeface(bebasNeue);
         resultField3.setTypeface(bebasNeue);
         fpsField.setTypeface(openSans);
+        objectnames = new String[5];
         protos = new Button[]{
                 (Button)findViewById(R.id.proto1),
                 (Button)findViewById(R.id.proto2),
@@ -112,7 +121,7 @@ public class MainActivity extends Activity {
                 (Button)findViewById(R.id.proto4),
                 (Button)findViewById(R.id.proto5),
         };
-        if(learner) {
+        if (learner) {
             protobmps = new BitmapDrawable[5][];
             for (int i = 0; i < 5; i++) {
                 protos[i].setHeight(protos[i].getWidth());
@@ -122,6 +131,20 @@ public class MainActivity extends Activity {
             for (int i = 0; i < 5; i++)
                 protos[i].setVisibility(View.GONE);
         }
+
+        objectName.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                if (actionId == EditorInfo.IME_ACTION_DONE) {
+                    v.setVisibility(View.GONE);
+                    recording = true;
+                    objectnames[editingobject] = ((EditText)v).getText().toString();
+                    ((EditText)v).setText("");
+                    return true;
+                }
+                return false;
+            }
+        });
     }
 
     /**
@@ -402,8 +425,17 @@ public class MainActivity extends Activity {
         }
     }
 
-    public void ProtoFound(int idx)
+    public void ProtoFound(int idx, float distance)
     {
+        if(distance > 0.05)
+            idx = -1;
+        if(idx >= 0) {
+            resultField1.setText(objectnames[idx]);
+            //resultField2.setText(String.format("Distance: %.3f", distance));
+        } else {
+            resultField1.setText("");
+            resultField2.setText("");
+        }
         for(int i = 0; i < 5; i++) {
             if(protobmps[i] != null)
                 protos[i].setBackground(protobmps[i][i == idx ? 1 : 0]);
@@ -448,7 +480,12 @@ public class MainActivity extends Activity {
     Button.OnClickListener protosOnClickListener = new Button.OnClickListener() {
         @Override
         public void onClick(View v) {
-            MainActivity.this.SaveProto(Integer.parseInt(((Button)v).getText().toString()) - 1);
+            if(recording) {
+                editingobject = Integer.parseInt(((Button) v).getText().toString()) - 1;
+                MainActivity.this.SaveProto(editingobject);
+                objectName.setVisibility(View.VISIBLE);
+                recording = false;
+            }
         }
     };
 }
