@@ -9,3 +9,9 @@
 - Android Studio may or may not give errors. If you see an error, click the "Fix now" link, and then compile again. This may happen a few times.
 - Once all the errors have been fixed, then app can be run.
 
+
+# omp.h not found error:
+to fix: use NDK 12:
+https://developer.android.com/ndk/downloads/older_releases.html
+to make it work with 13:
+https://github.com/android-ndk/ndk/issues/267
