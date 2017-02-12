@@ -8,10 +8,4 @@
 - Compile app.
 - Android Studio may or may not give errors. If you see an error, click the "Fix now" link, and then compile again. This may happen a few times.
 - Once all the errors have been fixed, then app can be run.
-
-
-# omp.h not found error:
-to fix: use NDK 12:
-https://developer.android.com/ndk/downloads/older_releases.html
-to make it work with 13:
-https://github.com/android-ndk/ndk/issues/267
+- Application.mk forces the use of gcc-4.9 (present in NDK 13b), because clang is the default in NDK 13b and it does not support OpenMP; if yo are using another NDK, just modify NDK_TOOLCHAIN_VERSION in Application.mk
