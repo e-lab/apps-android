@@ -82,12 +82,12 @@
 
     </LinearLayout>
     <EditText
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:inputType="text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textNoSuggestions"
         android:ems="10"
-    android:id="@+id/editTextObjectName"
-    android:layout_below="@+id/camera"
+        android:id="@+id/editTextObjectName"
+        android:layout_below="@+id/camera"
         android:visibility="gone"
         android:hint="Object name" />
 

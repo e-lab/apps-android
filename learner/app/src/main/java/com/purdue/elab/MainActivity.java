@@ -427,11 +427,11 @@ public class MainActivity extends Activity {
 
     public void ProtoFound(int idx, float distance)
     {
-        if(distance > 0.05)
-            idx = -1;
+//        if(distance > 0.05) // threshold to distance
+//            idx = -1;
         if(idx >= 0) {
             resultField1.setText(objectnames[idx]);
-            //resultField2.setText(String.format("Distance: %.3f", distance));
+            resultField2.setText(String.format("Distance: %.3f", distance));
         } else {
             resultField1.setText("");
             resultField2.setText("");
